@@ -15,7 +15,6 @@
 - **Шаг 3.** Создать новый скрипт или добавить следующий код в существующий скрипт:
 
 ```javascript
-// input 
 var sourceItem = IR.GetPage('Main').GetItem('SourceItem');
 var target1 = IR.GetPage('Main').GetItem('TargetItem1');
 var target2 = IR.GetPage('Main').GetItem('TargetItem2');
