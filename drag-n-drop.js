@@ -3,13 +3,18 @@
 
 // eslint-disable-next-line no-unused-vars
 function DragAndDrop(item, targetItems, cb) {
-    this.item = item;
-
     this.x0 = item.X;
     this.y0 = item.Y;
 
+    var that = this;
+
+    this.setOpacity = function(opacity) {
+        var state = item.GetState(item.State);
+        state.Opacity = (typeof opacity === 'undefined') ?  this.originalOpacity : opacity;
+    };
+
     this.onEndMove = function() {
-        var rect1 = {x1: this.item.X, x2: this.item.X + this.item.Width, y1: this.item.Y, y2: this.item.Y + this.item.Height};
+        var rect1 = {x1: this.popup.X, x2: this.popup.X + this.popup.Width, y1: this.popup.Y, y2: this.popup.Y + this.popup.Height};
 
         for (var i = 0; i < targetItems.length; i++) {
             var targetItem = targetItems[i];
@@ -19,7 +24,7 @@ function DragAndDrop(item, targetItems, cb) {
   
 
             var rect = getIntersectingRectangle(rect1, rect2);
-            var value = rect ? getSquare(rect)/(item.Width*item.Height) : false;
+            var value = rect ? getSquare(rect)/(this.popup.Width* this.popup.Height) : false;
             IR.Log('Intersect value (i = ' + i + '): ' + value);
 
             if (value > 0.5) {
@@ -30,18 +35,70 @@ function DragAndDrop(item, targetItems, cb) {
             }       
         }
 
-
-        this.item.X = this.x0;
-        this.item.Y = this.y0;
+        this.popup.X = this.x0;
+        this.popup.Y = this.y0;
     };
 
-    this.initialize = function() {
-        var popup = IR.GetPopup(this.item.Name);
-
-        if (popup) {
-            IR.AddListener(IR.EVENT_MOUSE_UP, this.item, this.onEndMove, this);
-            IR.AddListener(IR.EVENT_TOUCH_UP, this.item, this.onEndMove, this);
+    IR.AddListener(IR.EVENT_ITEM_SHOW, item, function() {
+        function copyProps(dest, src, props) {
+            for (var i = 0; i < props.length; i++) {
+                dest[props[i]] = src[props[i]];
+            }
         }
+
+        that.popup = IR.CreateItem(IR.ITEM_POPUP, 'Popup_' + item.Name, item.X, item.Y, item.Width, item.Height);
+        that.popup.Drag = true;
+        var state = item.GetState(item.State);
+        var popupState = that.popup.GetState(0);
+
+        copyProps(popupState, state, [
+            'Color', 'FillColor', 'Text', 'Border', 'BorderColor', 'TextColor', 'TextEffectColor', 'Opacity', 
+            'Image', 'ImageX', 'ImageY', 'ImageAlign', 'ImageStretch', 'Icon', 'IconX', 'IconY', 'IconAlign', 'FontId',
+            'TextAlign', 'TextX', 'TextY', 'TextEffect', 'DrawOrder', 'WordWrap'
+        ]);
+
+        that.originalOpacity = state.Opacity;
+        state.Opacity = DragAndDrop.DEFAULT_OPACITY;
+
+        IR.ShowPopup(that.popup.Name);
+
+        IR.AddListener(IR.EVENT_MOUSE_UP, that.popup, that.onEndMove, that);
+        IR.AddListener(IR.EVENT_TOUCH_UP, that.popup, that.onEndMove, that);
+    });
+
+    IR.AddListener(IR.EVENT_ITEM_HIDE, item, function() {
+        IR.RemoveListener(IR.EVENT_MOUSE_UP, that.popup, that.onEndMove);
+        IR.RemoveListener(IR.EVENT_TOUCH_UP, that.popup, that.onEndMove);
+
+        IR.RemoveItem(that.popup);
+        that.popup = null;
+    });
+
+    this.initialize = function() {
+        function copyProps(dest, src, props) {
+            for (var i = 0; i < props.length; i++) {
+                dest[props[i]] = src[props[i]];
+            }
+        }
+
+        this.popup = IR.CreateItem(IR.ITEM_POPUP, 'Popup_' + item.Name, item.X, item.Y, item.Width, item.Height);
+        this.popup.Drag = true;
+        var state = item.GetState(item.State);
+        var popupState = this.popup.GetState(0);
+
+        copyProps(popupState, state, [
+            'Color', 'FillColor', 'Text', 'Border', 'BorderColor', 'TextColor', 'TextEffectColor', 'Opacity', 
+            'Image', 'ImageX', 'ImageY', 'ImageAlign', 'ImageStretch', 'Icon', 'IconX', 'IconY', 'IconAlign', 'FontId',
+            'TextAlign', 'TextX', 'TextY', 'TextEffect', 'DrawOrder', 'WordWrap'
+        ]);
+
+        this.originalOpacity = state.Opacity;
+        state.Opacity = DragAndDrop.DEFAULT_OPACITY;
+
+        IR.ShowPopup(this.popup.Name);
+
+        IR.AddListener(IR.EVENT_MOUSE_UP, this.popup, this.onEndMove, this);
+        IR.AddListener(IR.EVENT_TOUCH_UP, this.popup, this.onEndMove, this);
     };
 
     function getIntersectingRectangle(r1, r2) {  
@@ -60,5 +117,6 @@ function DragAndDrop(item, targetItems, cb) {
     }
 
 
-    this.initialize();
+    // this.initialize();
 }
+DragAndDrop.DEFAULT_OPACITY = 30;
