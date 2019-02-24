@@ -7,15 +7,6 @@ var output1 = IR.GetPage('Main').GetItem('Output1');
 var output2 = IR.GetPage('Main').GetItem('Output2');
 var output3 = IR.GetPage('Main').GetItem('Output3');
 
-IR.AddListener(IR.EVENT_START, 0, function() {
-    printAllPopups();
-
-});
-
-IR.AddListener(IR.EVENT_ITEM_SHOW, IR.GetPage('Main'), function(){
-    printAllPopups();
-});
-
 function setOutput(input, output) {   
     if (output.State) {
         output.Text = output.Name;
@@ -43,12 +34,3 @@ function clearInput() {
     output.Text = this.name;
 }
 
-function printAllPopups() {
-    IR.Log('Popups count: ' + IR.PopupsCount);
-    for (var i = 0; i < IR.PopupsCount; i++) {
-        var popup = IR.GetPopup(i);
-        if (popup) {
-            IR.Log('Popup ' + i + ': ' + (popup ? popup.Name : 'none'));
-        }
-    }
-}

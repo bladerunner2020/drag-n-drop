@@ -1,7 +1,7 @@
 {
   "name": "drag-test",
   "version": "1.0.0",
-  "build": "1",
+  "build": "5",
   "description": "Sample for drag and drop in iRidium mobile",
   "main": "gruntfile.js",
   "scripts": {
