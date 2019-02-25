@@ -72,7 +72,7 @@ function DragAndDrop(item, targetItems, cb) {
         }
 
         var name = 'Drag_' + item.Name;
-        this.dragItem = IR.CreateItem(item.Type, name, item.X, item.Y, item.Width, item.Height);
+        this.dragItem = item.Parent.CreateItem(item.Type, name, item.X, item.Y, item.Width, item.Height);
         var state = item.GetState(item.State);
         var dragItemState = that.dragItem.GetState(0);
 
