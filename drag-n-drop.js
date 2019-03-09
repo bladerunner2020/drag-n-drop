@@ -34,9 +34,8 @@ function DragAndDrop(item, targetItems, cb) {
             var value = rect ? getSquare(rect)/(this.dragItem.Width* this.dragItem.Height) : false;
             // _Debug('Intersect value (i = ' + i + '): ' + value, 'DragAndDrop');
 
-            if (value >= this.intersectValue) {
-                if (cb) { cb(item, targetItem); } 
-                break;    
+            if (value > 0) {
+                if (cb) { cb(item, targetItem, value); } 
             }       
         }
 

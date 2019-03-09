@@ -1,0 +1,9 @@
+{
+  "name": "drag-n-drop",
+  "version": "1.0.0",
+  "description": "DragAndDrop for iRidium Mobile",
+  "main": "drag-n-drop.js",
+  "repository": "git@github.com:bladerunner2020/drag-n-drop.git",
+  "author": "bladerunnaer2020 <pivovarov@gmail.com>",
+  "license": "MIT"
+}
