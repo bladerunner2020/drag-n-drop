@@ -13,10 +13,11 @@ module.exports = {
         'sourceType': 'module'
     },
     'plugins': [
-        'jsdoc'
+        // 'jsdoc'
     ],
     'rules': {
         'no-invalid-this': 2,
+        'no-unused-vars': 1,
         'indent': [
             'error',
             4

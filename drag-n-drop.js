@@ -1,8 +1,13 @@
 // drag-n-drop.js
 /* global IR */
 
-// eslint-disable-next-line no-unused-vars
-function DragAndDrop(source, dest, cb) {
+/**
+ * 
+ * @param {Object} source - iridium item returned by GetItem(...)
+ * @param {*} dest - iridium item or array of items or array of array of items
+ * @param {function} cb - callback
+ */
+function DragAndDrop(source, dest, cb) { 
     this.intersectValue = DragAndDrop.DEFAULT_INTERSECT_VALUE;
     this.focusedTarget = undefined;
     this.savedProps =  {};
@@ -27,7 +32,7 @@ function DragAndDrop(source, dest, cb) {
     this.setFocusedItemProps = function(props) {
         this.focusedItemProps = props;
         return this;
-    }
+    };
 
     this.setIntersectionValue = function(value) {
         this.intersectValue = value;
@@ -112,6 +117,8 @@ function DragAndDrop(source, dest, cb) {
         var target = this.getBestFitTarget();
         this.setFocusedItem(target);
 
+
+
         if (this.dragItem) {
             this.dragItem.X = x;
             this.dragItem.Y = y;
@@ -125,21 +132,39 @@ function DragAndDrop(source, dest, cb) {
             var destState = dest.GetState ? dest.GetState(dest.State) : dest;
             var srcState = src.GetState ? src.GetState(src.State) : src;
             if (destState && srcState) {
-                for (p in props) {
+                for (var p in props) {
                     destState[p] = srcState[p];
                 }
             }
         }
 
         if (this.focusedTarget && this.focusedTarget !== target) {
-            setProps(this.focusedTarget, this.savedProps, this.focusedItemProps);
+            if (Array.isArray(this.focusedTarget)) {
+                this.focusedTarget.forEach(function(t) {
+                    setProps(t, that.savedProps, that.focusedItemProps);
+                });
+            } else {
+                setProps(this.focusedTarget, this.savedProps, this.focusedItemProps);
+            }
             this.focusedTarget = undefined;
         }
 
         if (target !== this.focusedTarget) {
             this.focusedTarget = target;
-            setProps(this.savedProps, target, this.focusedItemProps);
-            setProps(this.focusedTarget, this.focusedItemProps, this.focusedItemProps);
+            if (Array.isArray(this.focusedTarget)) {
+                if (this.focusedTarget.length > 0) {
+                    setProps(this.savedProps, this.focusedTarget[0], this.focusedItemProps);
+                    this.focusedTarget.forEach(function(t) {
+                        setProps(t, that.focusedItemProps, that.focusedItemProps);
+                    });
+                }
+            } else {
+                setProps(this.savedProps, target, this.focusedItemProps);
+                setProps(this.focusedTarget, this.focusedItemProps, this.focusedItemProps);
+            }
+
+            
+            
         }
     };
 
@@ -151,32 +176,41 @@ function DragAndDrop(source, dest, cb) {
     IR.AddListener(IR.EVENT_TOUCH_DOWN, item, this.onStartDrag, this);
 
 
-    this.getBestFitTarget = function() {
+    this.getBestFitTarget = function(onlyOne) {
         var rect1 = {x1: this.dragItem.X, x2: this.dragItem.X + this.dragItem.Width, y1: this.dragItem.Y, y2: this.dragItem.Y + this.dragItem.Height};
 
         var maxIndex = -1;
+        var maxIndex2 = -1;
         var maxValue = 0;
 
         for (var i = 0; i < targetItems.length; i++) {
-            var targetItem = targetItems[i];
-            if (targetItem) {
-                var rect2 = {x1: targetItem.X, x2: targetItem.X + targetItem.Width, y1: targetItem.Y, y2: targetItem.Y + targetItem.Height};  
+            if (targetItems[i]) {
+                var count = Array.isArray(targetItems[i]) ? targetItems[i].length : 1;
+                for (var j = 0; j < count; j++) {
+                    var targetItem = Array.isArray(targetItems[i]) ? targetItems[i][j] : targetItems[i];
+
+                    var rect2 = {x1: targetItem.X, x2: targetItem.X + targetItem.Width, y1: targetItem.Y, y2: targetItem.Y + targetItem.Height};  
                 
-
-                var rect = getIntersectingRectangle(rect1, rect2);
-                var value = rect ? getSquare(rect)/(this.dragItem.Width* this.dragItem.Height) : false;
-
-                if (value > maxValue) {
-                    maxIndex = i;
-                    maxValue = value;
-                }    
+                    var rect = getIntersectingRectangle(rect1, rect2);
+                    var value = rect ? getSquare(rect)/(this.dragItem.Width* this.dragItem.Height) : false;
+    
+                    if (value > maxValue) {
+                        maxIndex2 = j;
+                        maxIndex = i;
+                        maxValue = value;
+                    }   
+                } 
             }
         }
 
         if (maxValue > 0) {
-            return targetItems[maxIndex];
+            if (onlyOne && Array.isArray(targetItems[maxIndex])) {
+                return targetItems[maxIndex][maxIndex2];
+            } else {
+                return targetItems[maxIndex];
+            }
         } 
-    }
+    };
 
 
     function getIntersectingRectangle(r1, r2) {  
