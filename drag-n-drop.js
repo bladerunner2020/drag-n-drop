@@ -2,8 +2,14 @@
 /* global IR */
 
 // eslint-disable-next-line no-unused-vars
-function DragAndDrop(item, targetItems, cb) {
+function DragAndDrop(source, dest, cb) {
     this.intersectValue = DragAndDrop.DEFAULT_INTERSECT_VALUE;
+    this.focusedTarget = undefined;
+    this.savedProps =  {};
+    this.focusedItemProps = undefined;
+
+    var targetItems = Array.isArray(dest) ? dest : [dest];
+    var item =  source;
 
     var that = this;
 
@@ -13,6 +19,16 @@ function DragAndDrop(item, targetItems, cb) {
         return this;
     };
 
+    this.setTargets = function(dest) {
+        targetItems = Array.isArray(dest) ? dest : [dest];
+        return this;
+    };
+
+    this.setFocusedItemProps = function(props) {
+        this.focusedItemProps = props;
+        return this;
+    }
+
     this.setIntersectionValue = function(value) {
         this.intersectValue = value;
         return this;
@@ -21,24 +37,13 @@ function DragAndDrop(item, targetItems, cb) {
     this.onEndMove = function() {
         // _Debug('onEndMove: ' + this.dragItem.Name, 'DragAndDrop');
 
-        var rect1 = {x1: this.dragItem.X, x2: this.dragItem.X + this.dragItem.Width, y1: this.dragItem.Y, y2: this.dragItem.Y + this.dragItem.Height};
-
-        for (var i = 0; i < targetItems.length; i++) {
-            var targetItem = targetItems[i];
-            var rect2 = {x1: targetItem.X, x2: targetItem.X + targetItem.Width, y1: targetItem.Y, y2: targetItem.Y + targetItem.Height};  
-            
-
-            // _Debug(JSON.Stringify(rect1));
-            // _Debug(JSON.Stringify(rect2));
-            var rect = getIntersectingRectangle(rect1, rect2);
-            var value = rect ? getSquare(rect)/(this.dragItem.Width* this.dragItem.Height) : false;
-            // _Debug('Intersect value (i = ' + i + '): ' + value, 'DragAndDrop');
-
-            if (value > 0) {
-                if (cb) { cb(item, targetItem, value); } 
-            }       
+        var target = this.getBestFitTarget();
+        if (target && cb) {
+            cb(item, target);
         }
 
+        this.setFocusedItem(undefined);
+        
         this.dragItem.X = item.X;
         this.dragItem.Y = item.Y;
 
@@ -104,9 +109,37 @@ function DragAndDrop(item, targetItems, cb) {
             return;
         }
 
+        var target = this.getBestFitTarget();
+        this.setFocusedItem(target);
+
         if (this.dragItem) {
             this.dragItem.X = x;
             this.dragItem.Y = y;
+        }
+    };
+
+    this.setFocusedItem = function(target) {
+        function setProps(dest, src, props) {
+            if (!props) { return; }
+
+            var destState = dest.GetState ? dest.GetState(dest.State) : dest;
+            var srcState = src.GetState ? src.GetState(src.State) : src;
+            if (destState && srcState) {
+                for (p in props) {
+                    destState[p] = srcState[p];
+                }
+            }
+        }
+
+        if (this.focusedTarget && this.focusedTarget !== target) {
+            setProps(this.focusedTarget, this.savedProps, this.focusedItemProps);
+            this.focusedTarget = undefined;
+        }
+
+        if (target !== this.focusedTarget) {
+            this.focusedTarget = target;
+            setProps(this.savedProps, target, this.focusedItemProps);
+            setProps(this.focusedTarget, this.focusedItemProps, this.focusedItemProps);
         }
     };
 
@@ -116,6 +149,34 @@ function DragAndDrop(item, targetItems, cb) {
 
     IR.AddListener(IR.EVENT_MOUSE_DOWN, item, this.onStartDrag, this);
     IR.AddListener(IR.EVENT_TOUCH_DOWN, item, this.onStartDrag, this);
+
+
+    this.getBestFitTarget = function() {
+        var rect1 = {x1: this.dragItem.X, x2: this.dragItem.X + this.dragItem.Width, y1: this.dragItem.Y, y2: this.dragItem.Y + this.dragItem.Height};
+
+        var maxIndex = -1;
+        var maxValue = 0;
+
+        for (var i = 0; i < targetItems.length; i++) {
+            var targetItem = targetItems[i];
+            if (targetItem) {
+                var rect2 = {x1: targetItem.X, x2: targetItem.X + targetItem.Width, y1: targetItem.Y, y2: targetItem.Y + targetItem.Height};  
+                
+
+                var rect = getIntersectingRectangle(rect1, rect2);
+                var value = rect ? getSquare(rect)/(this.dragItem.Width* this.dragItem.Height) : false;
+
+                if (value > maxValue) {
+                    maxIndex = i;
+                    maxValue = value;
+                }    
+            }
+        }
+
+        if (maxValue > 0) {
+            return targetItems[maxIndex];
+        } 
+    }
 
 
     function getIntersectingRectangle(r1, r2) {  
