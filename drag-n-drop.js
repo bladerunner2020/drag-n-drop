@@ -118,7 +118,6 @@ function DragAndDrop(source, dest, cb) {
         this.setFocusedItem(target);
 
 
-
         if (this.dragItem) {
             this.dragItem.X = x;
             this.dragItem.Y = y;
@@ -126,46 +125,75 @@ function DragAndDrop(source, dest, cb) {
     };
 
     this.setFocusedItem = function(target) {
-        function setProps(dest, src, props) {
-            if (!props) { return; }
-
-            var destState = dest.GetState ? dest.GetState(dest.State) : dest;
-            var srcState = src.GetState ? src.GetState(src.State) : src;
-            if (destState && srcState) {
-                for (var p in props) {
-                    destState[p] = srcState[p];
-                }
-            }
-        }
-
         if (this.focusedTarget && this.focusedTarget !== target) {
-            if (Array.isArray(this.focusedTarget)) {
-                this.focusedTarget.forEach(function(t) {
-                    setProps(t, that.savedProps, that.focusedItemProps);
-                });
-            } else {
-                setProps(this.focusedTarget, this.savedProps, this.focusedItemProps);
-            }
+            this.restoreProps();
             this.focusedTarget = undefined;
         }
 
         if (target !== this.focusedTarget) {
             this.focusedTarget = target;
-            if (Array.isArray(this.focusedTarget)) {
-                if (this.focusedTarget.length > 0) {
-                    setProps(this.savedProps, this.focusedTarget[0], this.focusedItemProps);
-                    this.focusedTarget.forEach(function(t) {
-                        setProps(t, that.focusedItemProps, that.focusedItemProps);
-                    });
-                }
-            } else {
-                setProps(this.savedProps, target, this.focusedItemProps);
-                setProps(this.focusedTarget, this.focusedItemProps, this.focusedItemProps);
-            }
-
-            
-            
+            this.saveProps(target, this.focusedItemProps);
+            this.setNewProps(target, this.focusedItemProps);
         }
+    };
+
+    this.setNewProps = function(target, props) {
+        if (Array.isArray(target)) {
+            var that = this;
+            target.forEach(function(t) {
+                that.setNewProps(t, props);
+            });
+            return;
+        }
+
+        for (var i = 0; i < target.StatesCount; i++) {
+            var state = target.GetState(i);
+            for (var p in props) {
+                state[p] =  props[p];
+            }
+        }
+    };
+
+    this.saveProps = function(target, props) {
+        if (!this.savedFocusTargets) {
+            this.savedFocusTargets = {};
+        }
+
+        if (Array.isArray(target)) {
+            var that = this;
+            target.forEach(function(t) {
+                that.saveProps(t, props);
+            });
+            return;
+        }
+
+        var savedStates = [];
+
+        for (var i = 0; i < target.StatesCount; i++) {
+            savedStates[i] = {};
+            var state = target.GetState(i);
+            for (var p in props) {
+                savedStates[i][p] = state[p];
+            } 
+        }
+
+        this.savedFocusTargets[target.Name] = {
+            item: target, 
+            states: savedStates
+        };
+    };
+
+    this.restoreProps = function() {
+        for (var name in this.savedFocusTargets) {
+            var target = this.savedFocusTargets[name];
+            for (var i = 0; i < target.states.length; i++) {
+                var state = target.item.GetState(i);
+                for (var p in target.states[i]) {
+                    state[p] = target.states[i][p];
+                }
+            }
+        }
+        this.savedFocusTargets = {};
     };
 
     this.onDragItemPress = function() {
