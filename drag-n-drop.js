@@ -35,23 +35,18 @@ function DragAndDrop(source, dest, cb) {
     };
 
     this.setIntersectionValue = function(value) {
+        
         this.intersectValue = value;
         return this;
     };
 
     this.onEndMove = function() {
         // _Debug('onEndMove: ' + this.dragItem.Name, 'DragAndDrop');
-
         var target = this.getBestFitTarget();
-        if (target && cb) {
-            cb(item, target);
-        }
 
         this.setFocusedItem(undefined);
-        
         this.dragItem.X = item.X;
         this.dragItem.Y = item.Y;
-
         that.setOpacity(); // reset initial value of opacity
 
         IR.RemoveListener(IR.EVENT_MOUSE_UP, item, this.onEndMove);
@@ -62,6 +57,10 @@ function DragAndDrop(source, dest, cb) {
 
         IR.DeleteItem(that.dragItem);
         that.dragItem = null;
+        
+        if (target && cb) {
+            cb(item, target);
+        }
     };
 
     this.onStartDrag = function(x, y) {
@@ -138,6 +137,8 @@ function DragAndDrop(source, dest, cb) {
     };
 
     this.setNewProps = function(target, props) {
+        if (!props) { return; }
+
         if (Array.isArray(target)) {
             var that = this;
             target.forEach(function(t) {
@@ -146,15 +147,30 @@ function DragAndDrop(source, dest, cb) {
             return;
         }
 
+
         for (var i = 0; i < target.StatesCount; i++) {
             var state = target.GetState(i);
             for (var p in props) {
-                state[p] =  props[p];
+                if (p === 'State') {
+                    if (i === 0) {
+                        // Только 1 раз вызываем
+                        target.State = props.State;
+                    }
+                } else if (p === 'IncState') {
+                    if (i === 0) {
+                        // Только 1 раз вызываем
+                        target.State += props.IncState;  
+                    } 
+                } else  {
+                    state[p] =  props[p];
+                }
             }
         }
     };
 
     this.saveProps = function(target, props) {
+        if (!props) { return; }
+
         if (!this.savedFocusTargets) {
             this.savedFocusTargets = {};
         }
@@ -167,27 +183,43 @@ function DragAndDrop(source, dest, cb) {
             return;
         }
 
+        var savedProps = {};
         var savedStates = [];
 
         for (var i = 0; i < target.StatesCount; i++) {
             savedStates[i] = {};
             var state = target.GetState(i);
             for (var p in props) {
-                savedStates[i][p] = state[p];
+                if (p === 'State' || p === 'IncState') {
+                    if (i === 0) {
+                        // только 1 раз
+                        savedProps.State = target.State;
+                    }
+                } else {
+                    savedStates[i][p] = state[p];
+                }
             } 
         }
 
         this.savedFocusTargets[target.Name] = {
             item: target, 
-            states: savedStates
+            states: savedStates,
+            props: savedProps
         };
     };
 
     this.restoreProps = function() {
+        if (!this.savedFocusTargets) { return; }
+
         for (var name in this.savedFocusTargets) {
             var target = this.savedFocusTargets[name];
             for (var i = 0; i < target.states.length; i++) {
                 var state = target.item.GetState(i);
+
+                if (target.props && typeof target.props.State !== 'undefined') {
+                    target.item.State = target.props.State;
+                }
+
                 for (var p in target.states[i]) {
                     state[p] = target.states[i][p];
                 }
