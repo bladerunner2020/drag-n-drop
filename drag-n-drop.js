@@ -137,7 +137,7 @@ function DragAndDrop(source, dest, cb) {
     };
 
     this.setNewProps = function(target, props) {
-        if (!props) { return; }
+        if (!props || !target) { return; }
 
         if (Array.isArray(target)) {
             var that = this;
@@ -247,9 +247,8 @@ function DragAndDrop(source, dest, cb) {
             if (targetItems[i]) {
                 var count = Array.isArray(targetItems[i]) ? targetItems[i].length : 1;
                 for (var j = 0; j < count; j++) {
-                    if (!targetItem) { continue; }
-
                     var targetItem = Array.isArray(targetItems[i]) ? targetItems[i][j] : targetItems[i];
+                    if (!targetItem) { continue; }
 
                     var rect2 = {x1: targetItem.X, x2: targetItem.X + targetItem.Width, y1: targetItem.Y, y2: targetItem.Y + targetItem.Height};  
                 
