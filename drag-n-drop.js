@@ -69,27 +69,14 @@ function DragAndDrop(source, dest, cb) {
         this.dragOffsetX = item.X - x;
         this.dragOffsetY = item.Y - y;
 
-        function copyProps(dest, src, props) {
-            for (var i = 0; i < props.length; i++) {
-                dest[props[i]] = src[props[i]];
-            }
-        }
-
         if (this.dragItem) {
             this.onEndMove();
         }
 
         var name = 'Drag_' + item.Name;
-        this.dragItem = item.Parent.CreateItem(item.Type, name, item.X, item.Y, item.Width, item.Height);
+        this.dragItem = item.Clone(name);
         var state = item.GetState(item.State);
-        var dragItemState = that.dragItem.GetState(0);
-
-        copyProps(dragItemState, state, [
-            'Color', 'FillColor', 'Text', 'Border', 'BorderColor', 'TextColor', 'TextEffectColor', 'Opacity', 
-            'Image', 'ImageX', 'ImageY', 'ImageAlign', 'ImageStretch', 'Icon', 'IconX', 'IconY', 'IconAlign', 'FontId',
-            'TextAlign', 'TextX', 'TextY', 'TextEffect', 'DrawOrder', 'WordWrap'
-        ]);
-
+  
         that.originalOpacity = state.Opacity;
         state.Opacity = DragAndDrop.DEFAULT_OPACITY;
 
@@ -100,22 +87,24 @@ function DragAndDrop(source, dest, cb) {
         IR.AddListener(IR.EVENT_ITEM_PRESS, this.dragItem, this.onDragItemPress, this);
     };
 
+
     this.onDragItem = function(x, y) {
 
         x += this.dragOffsetX;
         y += this.dragOffsetY;
 
         // _Debug('MoveItem. X: ' + x + ', Y: ' + y, 'DragAndDrop');
-
+ 
         if (x <= 0 || y <= 0 || x >= (item.Parent.Width - item.Width) || y >= (item.Parent.Height - item.Height)) {
             // reaches boundaries of page
             this.onEndMove();
             return;
         }
 
-        var target = this.getBestFitTarget();
-        this.setFocusedItem(target);
-
+        if (!DragAndDrop.disabledHighlight) {
+            var target = this.getBestFitTarget();
+            this.setFocusedItem(target);
+        }
 
         if (this.dragItem) {
             this.dragItem.X = x;
@@ -236,27 +225,26 @@ function DragAndDrop(source, dest, cb) {
     IR.AddListener(IR.EVENT_TOUCH_DOWN, item, this.onStartDrag, this);
 
 
-    this.getBestFitTarget = function(onlyOne) {
+    this.getBestFitTarget = function() {
         var rect1 = {x1: this.dragItem.X, x2: this.dragItem.X + this.dragItem.Width, y1: this.dragItem.Y, y2: this.dragItem.Y + this.dragItem.Height};
 
         var maxIndex = -1;
-        var maxIndex2 = -1;
         var maxValue = 0;
 
         for (var i = 0; i < targetItems.length; i++) {
             if (targetItems[i]) {
-                var count = Array.isArray(targetItems[i]) ? targetItems[i].length : 1;
+                var isArr =  targetItem = Array.isArray(targetItems[i]);
+                var count = isArr ? targetItems[i].length : 1;
                 for (var j = 0; j < count; j++) {
-                    var targetItem = Array.isArray(targetItems[i]) ? targetItems[i][j] : targetItems[i];
+                    var targetItem = isArr ? targetItems[i][j] : targetItems[i];
+
                     if (!targetItem) { continue; }
 
                     var rect2 = {x1: targetItem.X, x2: targetItem.X + targetItem.Width, y1: targetItem.Y, y2: targetItem.Y + targetItem.Height};  
                 
-                    var rect = getIntersectingRectangle(rect1, rect2);
-                    var value = rect ? getSquare(rect)/(this.dragItem.Width* this.dragItem.Height) : false;
+                    var value = getIntersectingSquare(rect1, rect2);
     
                     if (value > maxValue) {
-                        maxIndex2 = j;
                         maxIndex = i;
                         maxValue = value;
                     }   
@@ -264,30 +252,18 @@ function DragAndDrop(source, dest, cb) {
             }
         }
 
-        if (maxValue > 0) {
-            if (onlyOne && Array.isArray(targetItems[maxIndex])) {
-                return targetItems[maxIndex][maxIndex2];
-            } else {
-                return targetItems[maxIndex];
-            }
+        if (maxValue >= 0) {
+            return targetItems[maxIndex];
         } 
     };
 
-
-    function getIntersectingRectangle(r1, r2) {  
+    function getIntersectingSquare(r1, r2) {  
         var noIntersect = r2.x1 > r1.x2 || r2.x2 < r1.x1 || r2.y1 > r1.y2 || r2.y2 < r1.y1;
       
-        return noIntersect ? false : {
-            x1: Math.max(r1.x1, r2.x1),
-            y1: Math.max(r1.y1, r2.y1), 
-            x2: Math.min(r1.x2, r2.x2),
-            y2: Math.min(r1.y2, r2.y2)
-        };
-    }
-
-    function getSquare(rect) {
-        return Math.abs((rect.x1 - rect.x2) * (rect.y1 - rect.y2));
+        return noIntersect ? 0 : 
+            Math.abs((Math.max(r1.x1, r2.x1) - Math.min(r1.x2, r2.x2)) * (Math.max(r1.y1, r2.y1) - Math.min(r1.y2, r2.y2)));
     }
 }
+
 DragAndDrop.DEFAULT_OPACITY = 30;
 DragAndDrop.DEFAULT_INTERSECT_VALUE = 0.5;
